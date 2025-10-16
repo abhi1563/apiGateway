@@ -1,0 +1,52 @@
+import json
+import boto3
+from datetime import datetime
+
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+table = dynamodb.Table('Users')  # Your DynamoDB table name
+
+def lambda_handler(event, context):
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'OPTIONS,POST',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            'body': ''
+        }
+
+    try:
+        body = json.loads(event.get('body', '{}'))
+
+        if not body.get('userId') or not body.get('name') or not body.get('email'):
+            return {
+                'statusCode': 400,
+                'headers': {'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': 'userId, name, email are required'})
+            }
+
+        table.put_item(
+            Item={
+                'userId': body['userId'],
+                'name': body['name'],
+                'email': body['email'],
+                'createdAt': datetime.utcnow().isoformat()
+            }
+        )
+
+        return {
+            'statusCode': 200,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'message': 'User added successfully!'})
+        }
+
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': str(e)})
+        }
+
